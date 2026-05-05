@@ -261,8 +261,8 @@ fun GeneratorDutyScreen(
     onOpenSettings: () -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
-    var blastAlpha by remember { mutableStateOf(0f) }
-    var blastScale by remember { mutableStateOf(1f) }
+    val blastAlpha = remember { Animatable(0f) }
+    val blastScale = remember { Animatable(1f) }
 
     val infiniteTransition = rememberInfiniteTransition()
     val glowScale by infiniteTransition.animateFloat(
@@ -287,7 +287,6 @@ fun GeneratorDutyScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // High-Quality Portrait Background
         androidx.compose.foundation.Image(
             painter = painterResource(id = backgroundRes),
             contentDescription = null,
@@ -295,7 +294,6 @@ fun GeneratorDutyScreen(
             contentScale = ContentScale.FillBounds
         )
         
-        // Darkened Overlay for Contrast
         Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)))
 
         Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -305,7 +303,6 @@ fun GeneratorDutyScreen(
 
             Spacer(modifier = Modifier.weight(0.8f))
 
-            // TOP BUTTONS (Full Charge & Unplug)
             Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 30.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                 FeatureButton(label = "FULL CHARGE", active = isFullCharge, color = NeonGreen, onClick = onToggleFullCharge)
                 FeatureButton(label = "UNPLUG ALARM", active = isUnplug, color = WarningRed, onClick = onToggleUnplug)
@@ -313,14 +310,12 @@ fun GeneratorDutyScreen(
 
             Spacer(modifier = Modifier.height(40.dp))
 
-            // CENTER ACTIVATE BUTTON with BLAST EFFECT
             Box(contentAlignment = Alignment.Center) {
-                // Blast Animation Ring
                 Box(
                     modifier = Modifier
                         .size(220.dp)
-                        .scale(blastScale)
-                        .alpha(blastAlpha)
+                        .scale(blastScale.value)
+                        .alpha(blastAlpha.value)
                         .border(10.dp, statusColor, CircleShape)
                 )
 
@@ -330,23 +325,19 @@ fun GeneratorDutyScreen(
                         .scale(if (isMonitoring) glowScale else 1f)
                         .shadow(if (isMonitoring) 50.dp else 0.dp, CircleShape, spotColor = statusColor)
                         .clip(CircleShape)
-                        .background(
-                            Brush.radialGradient(
-                                colors = listOf(statusColor.copy(alpha = 0.3f), Color.Transparent)
-                            )
-                        )
+                        .background(Brush.radialGradient(colors = listOf(statusColor.copy(alpha = 0.3f), Color.Transparent)))
                         .border(3.dp, statusColor, CircleShape)
                         .pointerInput(Unit) {
                             detectTapGestures(onTap = {
                                 coroutineScope.launch {
-                                    blastAlpha = 0.8f
-                                    blastScale = 1f
                                     onToggleMonitoring()
                                     launch {
-                                        animate(1f, 2.5f, animationSpec = tween(500)) { v, _ -> blastScale = v }
+                                        blastScale.snapTo(1f)
+                                        blastScale.animateTo(2.5f, tween(500))
                                     }
                                     launch {
-                                        animate(0.8f, 0f, animationSpec = tween(500)) { v, _ -> blastAlpha = v }
+                                        blastAlpha.snapTo(0.8f)
+                                        blastAlpha.animateTo(0f, tween(500))
                                     }
                                 }
                             })
