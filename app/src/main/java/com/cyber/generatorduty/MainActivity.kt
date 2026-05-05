@@ -13,6 +13,7 @@ import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
@@ -20,9 +21,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -55,6 +59,14 @@ class MainActivity : ComponentActivity() {
     private var isFullChargeAlarm = mutableStateOf(false)
     private var isUnplugAlarm = mutableStateOf(true)
     private var isCharging = mutableStateOf(true)
+    private var showSettings = mutableStateOf(false)
+    
+    // Settings state
+    private var speedDialNumber = mutableStateOf("")
+    private var speedDialDelay = mutableStateOf(3) // minutes
+    private var selectedLanguage = mutableStateOf("English")
+    private var isDarkMode = mutableStateOf(true)
+    private var selectedTheme = mutableStateOf(1) // 1 to 4
 
     private val updateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -81,18 +93,34 @@ class MainActivity : ComponentActivity() {
         )
 
         setContent {
-            MaterialTheme(colorScheme = darkColorScheme(background = CyberDark)) {
+            MaterialTheme(colorScheme = if (isDarkMode.value) darkColorScheme(background = CyberDark) else lightColorScheme()) {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    GeneratorDutyScreen(
-                        isMonitoring = isMonitoring.value,
-                        isFullCharge = isFullChargeAlarm.value,
-                        isUnplug = isUnplugAlarm.value,
-                        isCharging = isCharging.value,
-                        onToggleMonitoring = { toggleMonitoring() },
-                        onToggleFullCharge = { isFullChargeAlarm.value = !isFullChargeAlarm.value; updateService() },
-                        onToggleUnplug = { isUnplugAlarm.value = !isUnplugAlarm.value; updateService() },
-                        onStopAlarm = { stopAlarm() }
-                    )
+                    if (showSettings.value) {
+                        SettingsScreen(
+                            onBack = { showSettings.value = false },
+                            speedDial = speedDialNumber.value,
+                            onSpeedDialChange = { speedDialNumber.value = it },
+                            delay = speedDialDelay.value,
+                            onDelayChange = { speedDialDelay.value = it },
+                            language = selectedLanguage.value,
+                            onLanguageChange = { selectedLanguage.value = it },
+                            isDark = isDarkMode.value,
+                            onThemeToggle = { isDarkMode.value = !isDarkMode.value }
+                        )
+                    } else {
+                        GeneratorDutyScreen(
+                            isMonitoring = isMonitoring.value,
+                            isFullCharge = isFullChargeAlarm.value,
+                            isUnplug = isUnplugAlarm.value,
+                            isCharging = isCharging.value,
+                            theme = selectedTheme.value,
+                            onToggleMonitoring = { toggleMonitoring() },
+                            onToggleFullCharge = { isFullChargeAlarm.value = !isFullChargeAlarm.value; updateService() },
+                            onToggleUnplug = { isUnplugAlarm.value = !isUnplugAlarm.value; updateService() },
+                            onStopAlarm = { stopAlarm() },
+                            onOpenSettings = { showSettings.value = true }
+                        )
+                    }
                 }
             }
         }
@@ -122,6 +150,8 @@ class MainActivity : ComponentActivity() {
             intent.action = "UPDATE_CONFIG"
             intent.putExtra("fullCharge", isFullChargeAlarm.value)
             intent.putExtra("unplug", isUnplugAlarm.value)
+            intent.putExtra("speedDial", speedDialNumber.value)
+            intent.putExtra("speedDialDelay", speedDialDelay.value)
             
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 ContextCompat.startForegroundService(this, intent)
@@ -145,15 +175,90 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
+fun SettingsScreen(
+    onBack: () -> Unit,
+    speedDial: String,
+    onSpeedDialChange: (String) -> Unit,
+    delay: Int,
+    onDelayChange: (Int) -> Unit,
+    language: String,
+    onLanguageChange: (String) -> Unit,
+    isDark: Boolean,
+    onThemeToggle: () -> Unit
+) {
+    BackHandler { onBack() }
+    
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp)
+            .verticalScroll(rememberScrollState())
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, contentDescription = null) }
+            Text("SYSTEM CONFIG", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        }
+        
+        Spacer(modifier = Modifier.height(32.dp))
+        
+        Text("EMERGENCY SPEED DIAL", color = NeonBlue, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        TextField(
+            value = speedDial,
+            onValueChange = onSpeedDialChange,
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = { Text("Enter contact number...") },
+            colors = TextFieldDefaults.colors(unfocusedContainerColor = Color.Transparent)
+        )
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Text("CALL DELAY: $delay MIN", color = NeonBlue, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Slider(
+            value = delay.toFloat(),
+            onValueChange = { onDelayChange(it.toInt()) },
+            valueRange = 1f..10f,
+            steps = 9
+        )
+        
+        Spacer(modifier = Modifier.height(32.dp))
+        
+        Text("INTERFACE THEME", color = NeonBlue, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("DARK MODE")
+            Switch(checked = isDark, onCheckedChange = { onThemeToggle() })
+        }
+        
+        Spacer(modifier = Modifier.height(32.dp))
+        
+        Text("SYSTEM LANGUAGE", color = NeonBlue, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        val languages = listOf("English", "Spanish", "French", "German", "Hindi", "Arabic", "Chinese", "Japanese")
+        languages.forEach { lang ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .pointerInput(Unit) { detectTapGestures(onTap = { onLanguageChange(lang) }) }
+                    .padding(vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RadioButton(selected = language == lang, onClick = { onLanguageChange(lang) })
+                Text(lang)
+            }
+        }
+    }
+}
+
+@Composable
 fun GeneratorDutyScreen(
     isMonitoring: Boolean,
     isFullCharge: Boolean,
     isUnplug: Boolean,
     isCharging: Boolean,
+    theme: Int,
     onToggleMonitoring: () -> Unit,
     onToggleFullCharge: () -> Unit,
     onToggleUnplug: () -> Unit,
-    onStopAlarm: () -> Unit
+    onStopAlarm: () -> Unit,
+    onOpenSettings: () -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
     var blastAlpha by remember { mutableStateOf(0f) }
@@ -173,10 +278,18 @@ fun GeneratorDutyScreen(
         }
     )
 
+    val backgroundRes = when(theme) {
+        1 -> R.drawable.theme_1
+        2 -> R.drawable.theme_2
+        3 -> R.drawable.theme_3
+        4 -> R.drawable.theme_4
+        else -> R.drawable.app_bg
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         // High-Quality Portrait Background
         androidx.compose.foundation.Image(
-            painter = painterResource(id = R.drawable.app_bg),
+            painter = painterResource(id = backgroundRes),
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.FillBounds

@@ -87,21 +87,32 @@ class PowerMonitorService : Service() {
             "UPDATE_CONFIG" -> {
                 isFullChargeAlarmEnabled = intent.getBooleanExtra("fullCharge", false)
                 isUnplugAlarmEnabled = intent.getBooleanExtra("unplug", false)
+                speedDialNumber = intent.getStringExtra("speedDial")
+                speedDialDelay = intent.getIntExtra("speedDialDelay", 3)
             }
         }
         return START_STICKY
     }
 
+    private var speedDialNumber: String? = null
+    private var speedDialDelay: Int = 3
+    private var alarmStartTime: Long = 0
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val callRunnable = Runnable { makeEmergencyCall() }
+
     private fun triggerAlarm() {
         if (isAlarmRinging) return
         isAlarmRinging = true
+        alarmStartTime = System.currentTimeMillis()
+        
+        if (!speedDialNumber.isNullOrBlank()) {
+            handler.postDelayed(callRunnable, speedDialDelay * 60 * 1000L)
+        }
 
         val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        // Maximize volume
         val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM)
         audioManager.setStreamVolume(AudioManager.STREAM_ALARM, maxVolume, 0)
 
-        // Use high-volume system alarm sound
         val alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
             ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
         
@@ -116,7 +127,6 @@ class PowerMonitorService : Service() {
         }
         ringtone?.play()
 
-        // Continuous strong vibration
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             vibrator?.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 500, 200, 500), 0))
         } else {
@@ -125,8 +135,22 @@ class PowerMonitorService : Service() {
         }
     }
 
+    private fun makeEmergencyCall() {
+        if (!isAlarmRinging || speedDialNumber.isNullOrBlank()) return
+        val intent = Intent(Intent.ACTION_CALL).apply {
+            data = Uri.parse("tel:$speedDialNumber")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        try {
+            startActivity(intent)
+        } catch (e: Exception) {
+            Log.e("PowerMonitor", "Call failed: ${e.message}")
+        }
+    }
+
     private fun stopAlarm() {
         isAlarmRinging = false
+        handler.removeCallbacks(callRunnable)
         ringtone?.stop()
         ringtone = null
         vibrator?.cancel()
