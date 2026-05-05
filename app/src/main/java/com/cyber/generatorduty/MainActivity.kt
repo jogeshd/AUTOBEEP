@@ -298,8 +298,8 @@ fun GeneratorDutyScreen(
 
         Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
             Spacer(modifier = Modifier.height(40.dp))
-            Text("GEN-DUTY", fontSize = 48.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
-            Text("SYSTEM OVERWATCH", fontSize = 12.sp, color = NeonBlue, letterSpacing = 4.sp)
+            Text("SAFE-CHARGING", fontSize = 42.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+            Text("ADVANCED BATTERY SHIELD", fontSize = 12.sp, color = NeonBlue, letterSpacing = 4.sp)
 
             Spacer(modifier = Modifier.weight(0.8f))
 
@@ -362,15 +362,18 @@ fun GeneratorDutyScreen(
             }
 
             Spacer(modifier = Modifier.weight(1f))
+        }
 
-            // BOTTOM SETTINGS
-            Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.BottomEnd) {
-                IconButton(
-                    onClick = { /* Settings */ },
-                    modifier = Modifier.size(56.dp).background(Color.White.copy(alpha = 0.15f), CircleShape).border(1.dp, Color.White.copy(alpha = 0.3f), CircleShape)
-                ) {
-                    Icon(Icons.Default.Settings, contentDescription = null, tint = Color.White)
-                }
+        // SETTINGS BUTTON (Outside Column for absolute overlay)
+        Box(modifier = Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.BottomEnd) {
+            IconButton(
+                onClick = onOpenSettings,
+                modifier = Modifier
+                    .size(64.dp)
+                    .background(Color.White.copy(alpha = 0.15f), CircleShape)
+                    .border(1.dp, Color.White.copy(alpha = 0.3f), CircleShape)
+            ) {
+                Icon(Icons.Default.Settings, contentDescription = "Settings", tint = Color.White, modifier = Modifier.size(32.dp))
             }
         }
 
