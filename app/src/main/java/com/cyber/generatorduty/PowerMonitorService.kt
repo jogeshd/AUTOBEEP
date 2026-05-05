@@ -10,18 +10,19 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.media.AudioAttributes
 import android.media.AudioManager
+import android.media.Ringtone
 import android.media.RingtoneManager
-import android.media.ToneGenerator
 import android.os.Build
 import android.os.IBinder
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import android.util.Log
+import androidx.core.content.ContextCompat
 
 class PowerMonitorService : Service() {
 
-    private var toneGenerator: ToneGenerator? = null
+    private var ringtone: Ringtone? = null
     private var isAlarmRinging = false
     private var vibrator: Vibrator? = null
 
@@ -53,7 +54,8 @@ class PowerMonitorService : Service() {
             addAction(Intent.ACTION_POWER_CONNECTED)
             addAction(Intent.ACTION_POWER_DISCONNECTED)
         }
-        registerReceiver(powerReceiver, filter)
+        
+        ContextCompat.registerReceiver(this, powerReceiver, filter, ContextCompat.RECEIVER_EXPORTED)
         
         vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val vibratorManager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
@@ -80,15 +82,20 @@ class PowerMonitorService : Service() {
         val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM)
         audioManager.setStreamVolume(AudioManager.STREAM_ALARM, maxVolume, 0)
 
-        // Generate an extremely irritating high-frequency beep
-        toneGenerator = ToneGenerator(AudioManager.STREAM_ALARM, 100)
+        // Use high-volume system alarm sound
+        val alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+            ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
         
-        Thread {
-            while (isAlarmRinging) {
-                toneGenerator?.startTone(ToneGenerator.TONE_CDMA_EMERGENCY_RINGBACK, 1000)
-                try { Thread.sleep(1000) } catch (e: InterruptedException) {}
-            }
-        }.start()
+        ringtone = RingtoneManager.getRingtone(applicationContext, alarmUri)
+        ringtone?.audioAttributes = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_ALARM)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build()
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            ringtone?.isLooping = true
+        }
+        ringtone?.play()
 
         // Continuous strong vibration
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -101,9 +108,8 @@ class PowerMonitorService : Service() {
 
     private fun stopAlarm() {
         isAlarmRinging = false
-        toneGenerator?.stopTone()
-        toneGenerator?.release()
-        toneGenerator = null
+        ringtone?.stop()
+        ringtone = null
         vibrator?.cancel()
     }
 

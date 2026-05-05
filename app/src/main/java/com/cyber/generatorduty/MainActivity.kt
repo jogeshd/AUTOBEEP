@@ -1,5 +1,7 @@
 package com.cyber.generatorduty
 
+import com.cyber.generatorduty.R
+
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -162,20 +164,34 @@ fun GeneratorDutyScreen(
         // Main Status Indicator
         Box(
             modifier = Modifier
-                .size(220.dp)
+                .size(240.dp)
                 .scale(scale)
-                .shadow(if (isMonitoring) 30.dp else 0.dp, CircleShape, spotColor = statusColor)
+                .shadow(if (isMonitoring) 40.dp else 0.dp, CircleShape, spotColor = statusColor)
                 .border(4.dp, statusColor, CircleShape)
                 .clip(CircleShape)
                 .background(Color(0xFF111111)),
             contentAlignment = Alignment.Center
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            androidx.compose.foundation.Image(
+                painter = androidx.compose.ui.res.painterResource(id = R.drawable.logo),
+                contentDescription = "Duty Logo",
+                modifier = Modifier.fillMaxSize().padding(20.dp),
+                alpha = if (isMonitoring) 1f else 0.5f
+            )
+            
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Bottom,
+                modifier = Modifier.fillMaxSize().padding(bottom = 40.dp)
+            ) {
                 Text(
                     text = if (!isMonitoring) "STANDBY" else if (isCharging) "CHARGING" else "POWER LOSS!",
                     color = statusColor,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Black
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Black,
+                    style = androidx.compose.ui.text.TextStyle(
+                        shadow = androidx.compose.ui.graphics.Shadow(color = Color.Black, blurRadius = 8f)
+                    )
                 )
             }
         }
