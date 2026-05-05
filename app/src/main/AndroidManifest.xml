@@ -4,6 +4,7 @@
 
     <!-- Permissions for background monitoring, alarms, and vibration -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -33,7 +34,9 @@
             android:name=".PowerMonitorService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="specialUse" />
+            android:foregroundServiceType="specialUse">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_TYPE" android:value="Power loss monitoring for generator duty" />
+        </service>
             
         <receiver android:name=".PowerReceiver" android:exported="true">
             <intent-filter>
