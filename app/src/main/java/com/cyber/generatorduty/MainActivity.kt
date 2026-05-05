@@ -57,7 +57,12 @@ class MainActivity : ComponentActivity() {
         val status: Int = batteryStatus?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
         isCharging.value = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
 
-        registerReceiver(updateReceiver, IntentFilter("com.cyber.generatorduty.POWER_UPDATE"), RECEIVER_EXPORTED)
+        ContextCompat.registerReceiver(
+            this,
+            updateReceiver,
+            IntentFilter("com.cyber.generatorduty.POWER_UPDATE"),
+            ContextCompat.RECEIVER_EXPORTED
+        )
 
         setContent {
             MaterialTheme(
