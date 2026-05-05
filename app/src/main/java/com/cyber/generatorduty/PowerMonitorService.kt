@@ -12,6 +12,7 @@ import android.media.AudioAttributes
 import android.media.AudioManager
 import android.media.Ringtone
 import android.media.RingtoneManager
+import android.os.BatteryManager
 import android.os.Build
 import android.os.IBinder
 import android.os.VibrationEffect
@@ -26,24 +27,32 @@ class PowerMonitorService : Service() {
     private var ringtone: Ringtone? = null
     private var isAlarmRinging = false
     private var vibrator: Vibrator? = null
+    private var isFullChargeAlarmEnabled = false
+    private var isUnplugAlarmEnabled = false
 
     private val powerReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == Intent.ACTION_POWER_DISCONNECTED) {
-                Log.d("PowerMonitor", "Power DISCONNECTED! Triggering alarm.")
-                triggerAlarm()
-                
-                // Notify MainActivity to update UI
-                val broadcast = Intent("com.cyber.generatorduty.POWER_UPDATE")
-                broadcast.putExtra("isCharging", false)
-                sendBroadcast(broadcast)
-            } else if (intent?.action == Intent.ACTION_POWER_CONNECTED) {
-                Log.d("PowerMonitor", "Power CONNECTED.")
-                val broadcast = Intent("com.cyber.generatorduty.POWER_UPDATE")
-                broadcast.putExtra("isCharging", true)
-                sendBroadcast(broadcast)
+            when (intent?.action) {
+                Intent.ACTION_POWER_DISCONNECTED -> {
+                    if (isUnplugAlarmEnabled) triggerAlarm()
+                    sendPowerUpdate(false)
+                }
+                Intent.ACTION_POWER_CONNECTED -> sendPowerUpdate(true)
+                Intent.ACTION_BATTERY_CHANGED -> {
+                    val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+                    val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+                    if (isFullChargeAlarmEnabled && level != -1 && scale != -1 && level == scale) {
+                        triggerAlarm()
+                    }
+                }
             }
         }
+    }
+
+    private fun sendPowerUpdate(isCharging: Boolean) {
+        val broadcast = Intent("com.cyber.generatorduty.POWER_UPDATE")
+        broadcast.putExtra("isCharging", isCharging)
+        sendBroadcast(broadcast)
     }
 
     override fun onCreate() {
@@ -58,6 +67,7 @@ class PowerMonitorService : Service() {
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_POWER_CONNECTED)
             addAction(Intent.ACTION_POWER_DISCONNECTED)
+            addAction(Intent.ACTION_BATTERY_CHANGED)
         }
         
         ContextCompat.registerReceiver(this, powerReceiver, filter, ContextCompat.RECEIVER_EXPORTED)
@@ -72,8 +82,12 @@ class PowerMonitorService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == "STOP_ALARM") {
-            stopAlarm()
+        when (intent?.action) {
+            "STOP_ALARM" -> stopAlarm()
+            "UPDATE_CONFIG" -> {
+                isFullChargeAlarmEnabled = intent.getBooleanExtra("fullCharge", false)
+                isUnplugAlarmEnabled = intent.getBooleanExtra("unplug", false)
+            }
         }
         return START_STICKY
     }
