@@ -32,6 +32,7 @@ class PowerMonitorService : Service() {
     private var vibrator: Vibrator? = null
     private var isFullChargeAlarmEnabled = false
     private var isUnplugAlarmEnabled = false
+    private var isMonitoringActive = false
     private var speedDialNumber: String? = null
     private var speedDialDelay: Int = 3
     private var selectedTone: String = "Siren"
@@ -43,14 +44,14 @@ class PowerMonitorService : Service() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
                 Intent.ACTION_POWER_DISCONNECTED -> {
-                    if (isUnplugAlarmEnabled) triggerAlarm()
+                    if (isMonitoringActive && isUnplugAlarmEnabled) triggerAlarm()
                     sendPowerUpdate(false)
                 }
                 Intent.ACTION_POWER_CONNECTED -> sendPowerUpdate(true)
                 Intent.ACTION_BATTERY_CHANGED -> {
                     val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
                     val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
-                    if (isFullChargeAlarmEnabled && level != -1 && scale != -1 && level == scale) {
+                    if (isMonitoringActive && isFullChargeAlarmEnabled && level != -1 && scale != -1 && level == scale) {
                         triggerAlarm()
                     }
                 }
@@ -89,6 +90,7 @@ class PowerMonitorService : Service() {
         when (intent?.action) {
             "STOP_ALARM" -> stopAlarm()
             "UPDATE_CONFIG" -> {
+                isMonitoringActive = intent.getBooleanExtra("isMonitoring", false)
                 isFullChargeAlarmEnabled = intent.getBooleanExtra("fullCharge", false)
                 isUnplugAlarmEnabled = intent.getBooleanExtra("unplug", false)
                 speedDialNumber = intent.getStringExtra("speedDial")

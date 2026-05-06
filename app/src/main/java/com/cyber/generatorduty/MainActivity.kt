@@ -57,7 +57,7 @@ class MainActivity : ComponentActivity() {
 
     private var isMonitoring = mutableStateOf(false)
     private var isFullChargeAlarm = mutableStateOf(false)
-    private var isUnplugAlarm = mutableStateOf(true)
+    private var isUnplugAlarm = mutableStateOf(false)
     private var isCharging = mutableStateOf(true)
     private var showSettings = mutableStateOf(false)
     
@@ -164,6 +164,7 @@ class MainActivity : ComponentActivity() {
         val intent = Intent(this, PowerMonitorService::class.java)
         if (isMonitoring.value) {
             intent.action = "UPDATE_CONFIG"
+            intent.putExtra("isMonitoring", isMonitoring.value)
             intent.putExtra("fullCharge", isFullChargeAlarm.value)
             intent.putExtra("unplug", isUnplugAlarm.value)
             intent.putExtra("speedDial", speedDialNumber.value)
