@@ -162,22 +162,18 @@ class MainActivity : ComponentActivity() {
 
     private fun updateService() {
         val intent = Intent(this, PowerMonitorService::class.java)
-        if (isMonitoring.value) {
-            intent.action = "UPDATE_CONFIG"
-            intent.putExtra("isMonitoring", isMonitoring.value)
-            intent.putExtra("fullCharge", isFullChargeAlarm.value)
-            intent.putExtra("unplug", isUnplugAlarm.value)
-            intent.putExtra("speedDial", speedDialNumber.value)
-            intent.putExtra("speedDialDelay", speedDialDelay.value)
-            intent.putExtra("ringtone", selectedRingtone.value)
-            
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                ContextCompat.startForegroundService(this, intent)
-            } else {
-                startService(intent)
-            }
+        intent.action = "UPDATE_CONFIG"
+        intent.putExtra("isMonitoring", isMonitoring.value)
+        intent.putExtra("fullCharge", isFullChargeAlarm.value)
+        intent.putExtra("unplug", isUnplugAlarm.value)
+        intent.putExtra("speedDial", speedDialNumber.value)
+        intent.putExtra("speedDialDelay", speedDialDelay.value)
+        intent.putExtra("ringtone", selectedRingtone.value)
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            ContextCompat.startForegroundService(this, intent)
         } else {
-            stopService(intent)
+            startService(intent)
         }
     }
 
