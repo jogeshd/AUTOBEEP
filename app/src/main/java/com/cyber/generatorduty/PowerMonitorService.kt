@@ -99,6 +99,9 @@ class PowerMonitorService : Service() {
         return START_STICKY
     }
 
+    private var audioTrack: android.media.AudioTrack? = null
+    private var isPlayingTone = false
+
     private fun triggerAlarm() {
         if (isAlarmRinging) return
         isAlarmRinging = true
@@ -108,33 +111,18 @@ class PowerMonitorService : Service() {
             handler.postDelayed(callRunnable, speedDialDelay * 60 * 1000L)
         }
 
-        // POP-UP OVER OTHER APPS: Update notification with High Priority and Full Screen Intent
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.notify(1, buildNotification(true))
 
-        val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM)
-        audioManager.setStreamVolume(AudioManager.STREAM_ALARM, maxVolume, 0)
+        startIrritatingTone()
 
-        // Select Irritating Pattern
-        val (vibePattern, alarmUri) = when (selectedTone) {
-            "Siren" -> longArrayOf(0, 1000, 500, 1000) to RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-            "Nuclear" -> longArrayOf(0, 200, 100, 200, 100, 1000) to RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-            "Air Horn" -> longArrayOf(0, 3000, 500) to RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
-            "Jackhammer" -> longArrayOf(0, 50, 50, 50, 50) to RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
-            else -> longArrayOf(0, 500, 200, 500) to RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+        val vibePattern = when (selectedTone) {
+            "Siren" -> longArrayOf(0, 1000, 500, 1000)
+            "Nuclear" -> longArrayOf(0, 200, 100, 200, 100, 1000)
+            "Air Horn" -> longArrayOf(0, 3000, 500)
+            "Jackhammer" -> longArrayOf(0, 50, 50, 50, 50)
+            else -> longArrayOf(0, 500, 200, 500)
         }
-
-        ringtone = RingtoneManager.getRingtone(applicationContext, alarmUri ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM))
-        ringtone?.audioAttributes = AudioAttributes.Builder()
-            .setUsage(AudioAttributes.USAGE_ALARM)
-            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-            .build()
-        
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            ringtone?.isLooping = true
-        }
-        ringtone?.play()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             vibrator?.vibrate(VibrationEffect.createWaveform(vibePattern, 0))
@@ -142,6 +130,37 @@ class PowerMonitorService : Service() {
             @Suppress("DEPRECATION")
             vibrator?.vibrate(vibePattern, 0)
         }
+    }
+
+    private fun startIrritatingTone() {
+        isPlayingTone = true
+        Thread {
+            val sampleRate = 44100
+            val numSamples = sampleRate // 1 second buffer
+            val samples = ShortArray(numSamples)
+            val minSize = android.media.AudioTrack.getMinBufferSize(sampleRate, android.media.AudioFormat.CHANNEL_OUT_MONO, android.media.AudioFormat.ENCODING_PCM_16BIT)
+            
+            audioTrack = android.media.AudioTrack(
+                android.media.AudioManager.STREAM_ALARM,
+                sampleRate,
+                android.media.AudioFormat.CHANNEL_OUT_MONO,
+                android.media.AudioFormat.ENCODING_PCM_16BIT,
+                minSize.coerceAtLeast(numSamples * 2),
+                android.media.AudioTrack.MODE_STREAM
+            )
+            
+            audioTrack?.play()
+            
+            var angle = 0.0
+            while (isPlayingTone) {
+                val freq = if ((System.currentTimeMillis() / 500) % 2 == 0L) 3000.0 else 2000.0
+                for (i in samples.indices) {
+                    samples[i] = (Math.sin(angle) * 32767).toInt().toShort()
+                    angle += 2.0 * Math.PI * freq / sampleRate
+                }
+                audioTrack?.write(samples, 0, samples.size)
+            }
+        }.start()
     }
 
     private fun makeEmergencyCall() {
@@ -159,12 +178,15 @@ class PowerMonitorService : Service() {
 
     private fun stopAlarm() {
         isAlarmRinging = false
+        isPlayingTone = false
         handler.removeCallbacks(callRunnable)
-        ringtone?.stop()
-        ringtone = null
+        
+        audioTrack?.stop()
+        audioTrack?.release()
+        audioTrack = null
+        
         vibrator?.cancel()
         
-        // Reset notification to normal
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.notify(1, buildNotification(false))
     }

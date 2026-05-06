@@ -108,7 +108,9 @@ class MainActivity : ComponentActivity() {
                             isDark = isDarkMode.value,
                             onThemeToggle = { isDarkMode.value = !isDarkMode.value },
                             ringtone = selectedRingtone.value,
-                            onRingtoneChange = { selectedRingtone.value = it }
+                            onRingtoneChange = { selectedRingtone.value = it },
+                            selectedTheme = selectedTheme.value,
+                            onThemeChange = { selectedTheme.value = it }
                         )
                     } else {
                         GeneratorDutyScreen(
@@ -179,7 +181,9 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun stopAlarm() {
-        val intent = Intent(this, PowerMonitorService::class.java).apply { action = "STOP_ALARM" }
+        isMonitoring.value = false // CRITICAL: Stop monitoring so the overlay disappears
+        val intent = Intent(this, PowerMonitorService::class.java)
+        intent.action = "STOP_ALARM"
         startService(intent)
     }
 
@@ -201,13 +205,16 @@ fun SettingsScreen(
     isDark: Boolean,
     onThemeToggle: () -> Unit,
     ringtone: String,
-    onRingtoneChange: (String) -> Unit
+    onRingtoneChange: (String) -> Unit,
+    selectedTheme: Int,
+    onThemeChange: (Int) -> Unit
 ) {
     BackHandler { onBack() }
     
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(CyberDark)
             .padding(24.dp)
             .verticalScroll(rememberScrollState())
     ) {
@@ -217,6 +224,22 @@ fun SettingsScreen(
         }
         
         Spacer(modifier = Modifier.height(32.dp))
+
+        Text("VISUAL THEME", color = NeonBlue, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+            (1..4).forEach { t ->
+                Button(
+                    onClick = { onThemeChange(t) },
+                    colors = ButtonDefaults.buttonColors(containerColor = if (selectedTheme == t) NeonBlue else Color.DarkGray),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.weight(1f).padding(4.dp)
+                ) {
+                    Text("T$t", color = if (selectedTheme == t) Color.Black else Color.White)
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
         
         Text("IRRITATING ALARM TONE", color = NeonBlue, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         val ringtones = listOf("Siren", "Emergency", "Air Horn", "High Pitch", "Metal Scraping", "Jackhammer", "Whistle", "Buzzer", "Alarm Clock", "Nuclear")
@@ -319,20 +342,21 @@ fun GeneratorDutyScreen(
         }
     )
 
-    val backgroundRes = when(theme) {
-        1 -> R.drawable.theme_1
-        2 -> R.drawable.theme_2
-        3 -> R.drawable.theme_3
-        4 -> R.drawable.theme_4
-        else -> R.drawable.app_bg
+    val bgRes = when(theme) {
+        1 -> R.drawable.bg_1
+        2 -> R.drawable.bg_2
+        3 -> R.drawable.bg_3
+        4 -> R.drawable.bg_4
+        else -> R.drawable.bg_1
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
         androidx.compose.foundation.Image(
-            painter = painterResource(id = backgroundRes),
+            painter = painterResource(id = bgRes),
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.FillBounds
+            contentScale = ContentScale.Crop,
+            alpha = 0.5f
         )
         
         Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)))
