@@ -32,6 +32,12 @@ class PowerMonitorService : Service() {
     private var vibrator: Vibrator? = null
     private var isFullChargeAlarmEnabled = false
     private var isUnplugAlarmEnabled = false
+    private var speedDialNumber: String? = null
+    private var speedDialDelay: Int = 3
+    private var selectedTone: String = "Siren"
+    private var alarmStartTime: Long = 0
+    private val handler = Handler(Looper.getMainLooper())
+    private val callRunnable = Runnable { makeEmergencyCall() }
 
     private val powerReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -61,18 +67,13 @@ class PowerMonitorService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            startForeground(1, buildNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
-        } else {
-            startForeground(1, buildNotification())
-        }
+        startForeground(1, buildNotification())
 
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_POWER_CONNECTED)
             addAction(Intent.ACTION_POWER_DISCONNECTED)
             addAction(Intent.ACTION_BATTERY_CHANGED)
         }
-        
         ContextCompat.registerReceiver(this, powerReceiver, filter, ContextCompat.RECEIVER_EXPORTED)
         
         vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -92,16 +93,11 @@ class PowerMonitorService : Service() {
                 isUnplugAlarmEnabled = intent.getBooleanExtra("unplug", false)
                 speedDialNumber = intent.getStringExtra("speedDial")
                 speedDialDelay = intent.getIntExtra("speedDialDelay", 3)
+                selectedTone = intent.getStringExtra("ringtone") ?: "Siren"
             }
         }
         return START_STICKY
     }
-
-    private var speedDialNumber: String? = null
-    private var speedDialDelay: Int = 3
-    private var alarmStartTime: Long = 0
-    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
-    private val callRunnable = Runnable { makeEmergencyCall() }
 
     private fun triggerAlarm() {
         if (isAlarmRinging) return
@@ -112,14 +108,24 @@ class PowerMonitorService : Service() {
             handler.postDelayed(callRunnable, speedDialDelay * 60 * 1000L)
         }
 
+        // POP-UP OVER OTHER APPS: Update notification with High Priority and Full Screen Intent
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.notify(1, buildNotification(true))
+
         val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
         val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM)
         audioManager.setStreamVolume(AudioManager.STREAM_ALARM, maxVolume, 0)
 
-        val alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-            ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
-        
-        ringtone = RingtoneManager.getRingtone(applicationContext, alarmUri)
+        // Select Irritating Pattern
+        val (vibePattern, alarmUri) = when (selectedTone) {
+            "Siren" -> longArrayOf(0, 1000, 500, 1000) to RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+            "Nuclear" -> longArrayOf(0, 200, 100, 200, 100, 1000) to RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+            "Air Horn" -> longArrayOf(0, 3000, 500) to RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+            "Jackhammer" -> longArrayOf(0, 50, 50, 50, 50) to RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+            else -> longArrayOf(0, 500, 200, 500) to RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+        }
+
+        ringtone = RingtoneManager.getRingtone(applicationContext, alarmUri ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM))
         ringtone?.audioAttributes = AudioAttributes.Builder()
             .setUsage(AudioAttributes.USAGE_ALARM)
             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
@@ -131,10 +137,10 @@ class PowerMonitorService : Service() {
         ringtone?.play()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            vibrator?.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 500, 200, 500), 0))
+            vibrator?.vibrate(VibrationEffect.createWaveform(vibePattern, 0))
         } else {
             @Suppress("DEPRECATION")
-            vibrator?.vibrate(longArrayOf(0, 500, 200, 500), 0)
+            vibrator?.vibrate(vibePattern, 0)
         }
     }
 
@@ -157,35 +163,57 @@ class PowerMonitorService : Service() {
         ringtone?.stop()
         ringtone = null
         vibrator?.cancel()
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        unregisterReceiver(powerReceiver)
-        stopAlarm()
+        
+        // Reset notification to normal
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.notify(1, buildNotification(false))
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel("gen_duty_channel", "Generator Duty", NotificationManager.IMPORTANCE_HIGH)
+            val channel = NotificationChannel(
+                "power_monitor",
+                "Safe-Charging Status",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Monitoring battery and power state"
+                setSound(null, null)
+                enableVibration(false)
+                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+            }
             val manager = getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(channel)
         }
     }
 
-    private fun buildNotification(): Notification {
+    private fun buildNotification(isAlarm: Boolean = false): Notification {
+        val intent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val pendingIntent = android.app.PendingIntent.getActivity(
+            this, 0, intent,
+            android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+        )
+
         val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Notification.Builder(this, "gen_duty_channel")
+            Notification.Builder(this, "power_monitor")
         } else {
             @Suppress("DEPRECATION")
             Notification.Builder(this)
         }
+
         return builder
-            .setContentTitle("Generator Duty Active")
-            .setContentText("Monitoring power status...")
-            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setContentTitle(if (isAlarm) "!!! SECURITY BREACH !!!" else "SAFE-CHARGING Active")
+            .setContentText(if (isAlarm) "DISCONNECT DETECTED! Tap to Disarm." else "System is monitoring power state.")
+            .setSmallIcon(android.R.drawable.ic_lock_idle_lock)
+            .setContentIntent(pendingIntent)
+            .setFullScreenIntent(pendingIntent, isAlarm)
+            .setOngoing(true)
+            .setCategory(Notification.CATEGORY_ALARM)
+            .setPriority(if (isAlarm) Notification.PRIORITY_MAX else Notification.PRIORITY_LOW)
+            .setVisibility(Notification.VISIBILITY_PUBLIC)
             .build()
     }
 }

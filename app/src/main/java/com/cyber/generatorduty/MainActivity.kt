@@ -67,6 +67,7 @@ class MainActivity : ComponentActivity() {
     private var selectedLanguage = mutableStateOf("English")
     private var isDarkMode = mutableStateOf(true)
     private var selectedTheme = mutableStateOf(1) // 1 to 4
+    private var selectedRingtone = mutableStateOf("Siren")
 
     private val updateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -105,7 +106,9 @@ class MainActivity : ComponentActivity() {
                             language = selectedLanguage.value,
                             onLanguageChange = { selectedLanguage.value = it },
                             isDark = isDarkMode.value,
-                            onThemeToggle = { isDarkMode.value = !isDarkMode.value }
+                            onThemeToggle = { isDarkMode.value = !isDarkMode.value },
+                            ringtone = selectedRingtone.value,
+                            onRingtoneChange = { selectedRingtone.value = it }
                         )
                     } else {
                         GeneratorDutyScreen(
@@ -130,11 +133,22 @@ class MainActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val pm = getSystemService(POWER_SERVICE) as PowerManager
             if (!pm.isIgnoringBatteryOptimizations(packageName)) {
-                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:$packageName"))
-                startActivity(intent)
+                try {
+                    startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:$packageName")))
+                } catch (e: Exception) {}
             }
+            
+            // Critical: Display over other apps (System Alert Window)
             if (!Settings.canDrawOverlays(this)) {
-                startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
+                // We show a Toast or simple explanation if we could, but here we just launch the intent
+                // Modern Android requires the user to manually enable this for security
+                try {
+                    val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+                    startActivity(intent)
+                }
             }
         }
     }
@@ -152,6 +166,7 @@ class MainActivity : ComponentActivity() {
             intent.putExtra("unplug", isUnplugAlarm.value)
             intent.putExtra("speedDial", speedDialNumber.value)
             intent.putExtra("speedDialDelay", speedDialDelay.value)
+            intent.putExtra("ringtone", selectedRingtone.value)
             
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 ContextCompat.startForegroundService(this, intent)
@@ -184,7 +199,9 @@ fun SettingsScreen(
     language: String,
     onLanguageChange: (String) -> Unit,
     isDark: Boolean,
-    onThemeToggle: () -> Unit
+    onThemeToggle: () -> Unit,
+    ringtone: String,
+    onRingtoneChange: (String) -> Unit
 ) {
     BackHandler { onBack() }
     
@@ -195,8 +212,32 @@ fun SettingsScreen(
             .verticalScroll(rememberScrollState())
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, contentDescription = null) }
-            Text("SYSTEM CONFIG", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, contentDescription = null, tint = NeonBlue) }
+            Text("SYSTEM CONFIG", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
+        }
+        
+        Spacer(modifier = Modifier.height(32.dp))
+        
+        Text("IRRITATING ALARM TONE", color = NeonBlue, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        val ringtones = listOf("Siren", "Emergency", "Air Horn", "High Pitch", "Metal Scraping", "Jackhammer", "Whistle", "Buzzer", "Alarm Clock", "Nuclear")
+        
+        Column(modifier = Modifier.padding(vertical = 8.dp)) {
+            ringtones.forEach { tone ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .pointerInput(Unit) { detectTapGestures(onTap = { onRingtoneChange(tone) }) }
+                        .padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
+                        selected = ringtone == tone,
+                        onClick = { onRingtoneChange(tone) },
+                        colors = RadioButtonDefaults.colors(selectedColor = NeonBlue)
+                    )
+                    Text(tone, color = if (ringtone == tone) NeonBlue else Color.White)
+                }
+            }
         }
         
         Spacer(modifier = Modifier.height(32.dp))
