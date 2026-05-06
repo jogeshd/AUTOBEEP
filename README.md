@@ -1,77 +1,80 @@
-# 🛡️ SAFE-CHARGING (AutoBeep)
+# <p align="center">🛡️ SAFE-CHARGING (AutoBeep)</p>
 
 <p align="center">
-  <img src="assets/logo_hero.png" width="300" alt="SAFE-CHARGING Logo">
+  <img src="assets/logo_hero.png" width="280" alt="SAFE-CHARGING Logo">
 </p>
 
 <p align="center">
-  <b>Advanced Battery Protection & Security Overwatch for Android</b>
+  <b>The Ultimate Cyberpunk Security Overwatch for Android</b>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Platform-Android-green?style=for-the-badge&logo=android" alt="Android Support">
-  <img src="https://img.shields.io/badge/Status-Ultra--Premium-blue?style=for-the-badge" alt="Status">
-  <img src="https://img.shields.io/badge/UI-Cyberpunk%203D-purple?style=for-the-badge" alt="UI Theme">
-</p>
-
----
-
-## 🚀 Overview
-
-**SAFE-CHARGING** is a high-reliability security utility designed to protect your device from unauthorized disconnection and ensure optimal battery health. Built with a stunning 3D cyberpunk interface, it provides real-time monitoring and emergency response features that set a new standard for mobile security apps.
-
-### ✨ Key Features
-
-- 🔋 **Full Charge Alarm:** Get notified immediately when your battery hits 100% to prevent overcharging.
-- 🔌 **Unplug Protection:** A high-decibel alarm triggers the moment your charger is disconnected without authorization.
-- 📞 **Automatic Speed Dial:** If the alarm isn't disarmed within a set time, the app automatically calls your emergency contact.
-- 🎆 **3D Blast Animation:** Interactive shockwave effects upon system activation for a premium tactile feel.
-- 🎭 **Dynamic Themes:** 4 custom high-definition themes to match your personal style.
-- 🌍 **Multilingual Support:** Fully localized for 22 different languages.
-
----
-
-## 📸 Interface Showcase
-
-<p align="center">
-  <img src="assets/screen_1.png" width="250" alt="Main Dashboard">
-  <img src="assets/screen_2.png" width="250" alt="Theme Selection">
-  <img src="assets/screen_3.png" width="250" alt="Security Controls">
-</p>
-
-<p align="center">
-  <i>"Premium design meets military-grade reliability."</i>
-</p>
-
-<p align="center">
-  <img src="assets/screen_4.png" width="250" alt="Alert System">
-  <img src="assets/screen_5.png" width="250" alt="Settings Menu">
+  <img src="https://img.shields.io/badge/Status-Ultra--Premium-blue?style=for-the-badge&logo=appveyor" />
+  <img src="https://img.shields.io/badge/Security-Omega-red?style=for-the-badge&logo=googlecloud" />
+  <img src="https://img.shields.io/badge/Interface-3D--Cyberpunk-cyan?style=for-the-badge&logo=blueprint" />
 </p>
 
 ---
 
-## 🛠️ Technology Stack
+## ⚡ SYSTEM CAPABILITIES
 
-- **Core Logic:** Kotlin
-- **UI Framework:** Jetpack Compose
-- **Animations:** Animatable 3D Engine
-- **Background Service:** Foreground Service (Android 14+ Compatible)
-- **Architecture:** MVVM (Model-View-ViewModel)
+**SAFE-CHARGING** is not just a battery app; it is a dedicated security hub for your device. Designed with a high-fidelity cyberpunk aesthetic, it combines military-grade reliability with state-of-the-art UI/UX.
 
----
+### 🧬 Core Modules
 
-## 📥 Installation
-
-1. Download the latest APK from the [Actions Tab](https://github.com/jogeshd/AUTOBEEP/actions).
-2. Install on any Android 8.0+ device.
-3. Grant **Overlay** and **Battery Optimization** permissions for 100% reliability.
+| Module | Description | Impact |
+| :--- | :--- | :--- |
+| 🔋 **Full Charge Shield** | Prevents battery degradation by alerting at 100%. | **High** |
+| 🔌 **Unplug Overwatch** | Triggers a 100dB alarm if the charger is removed. | **Critical** |
+| 🔊 **Irritating Tones** | 10 medically-designed frequencies (Siren, Nuclear, etc). | **Extreme** |
+| 📞 **Neural Link Dial** | Automatically calls emergency contacts if disarm fails. | **Essential** |
+| 🎆 **3D Blast Engine** | Interactive shockwave animations for haptic feedback. | **Premium** |
 
 ---
 
-## 📜 License
-
-© 2026 SAFE-CHARGING Team. All rights reserved. Professional security for the modern user.
+## 📸 INTERFACE OVERVIEW
 
 <p align="center">
-  Made with ❤️ for high-performance security.
+  <img src="assets/screen_1.png" width="180" />
+  <img src="assets/screen_2.png" width="180" />
+  <img src="assets/screen_3.png" width="180" />
+</p>
+
+<p align="center">
+  <i>"Where aesthetics meet absolute reliability."</i>
+</p>
+
+<p align="center">
+  <img src="assets/screen_4.png" width="180" />
+  <img src="assets/screen_5.png" width="180" />
+</p>
+
+---
+
+## 🛠️ HARDWARE & LOGIC
+
+- **Engine:** Jetpack Compose (Kotlin)
+- **Audio:** Synthetic Frequency Generator (Low-level AudioTrack)
+- **Security:** High-Priority Full Screen Intent Pop-over
+- **Compatibility:** Android 8.0 to Android 14+ (FGS Special Use)
+
+---
+
+## 📥 INITIALIZATION
+
+1. **DOWNLOAD:** Grab the latest binary from the [Actions Tab](https://github.com/jogeshd/AUTOBEEP/actions).
+2. **INSTALL:** Side-load onto your Android device.
+3. **AUTHORIZE:**
+    - Grant **Display Over Other Apps** (for immediate pop-up).
+    - Grant **Call Phone** (for emergency speed dial).
+    - Disable **Battery Optimization** (for background persistence).
+
+---
+
+<p align="center">
+  © 2026 SAFE-CHARGING PROJECT. SYSTEM STATUS: <b>OPERATIONAL</b>
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/aqua.png" width="100%">
 </p>
