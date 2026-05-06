@@ -153,7 +153,7 @@ class PowerMonitorService : Service() {
             
             var angle = 0.0
             while (isPlayingTone) {
-                val freq = if ((System.currentTimeMillis() / 500) % 2 == 0L) 3000.0 else 2000.0
+                val freq = getFreqForTone(selectedTone, System.currentTimeMillis())
                 for (i in samples.indices) {
                     samples[i] = (Math.sin(angle) * 32767).toInt().toShort()
                     angle += 2.0 * Math.PI * freq / sampleRate
@@ -161,6 +161,21 @@ class PowerMonitorService : Service() {
                 audioTrack?.write(samples, 0, samples.size)
             }
         }.start()
+    }
+
+    private fun getFreqForTone(name: String, time: Long): Double {
+        return when (name) {
+            "Siren" -> if ((time / 500) % 2 == 0L) 1200.0 else 800.0
+            "Nuclear" -> if ((time / 200) % 5 == 0L) 1000.0 else 0.0
+            "Air Horn" -> 440.0
+            "High Pitch" -> 4000.0
+            "Metal Scraping" -> (Math.random() * 2000 + 1000)
+            "Jackhammer" -> if ((time / 50) % 2 == 0L) 200.0 else 0.0
+            "Whistle" -> 2500.0
+            "Buzzer" -> if ((time / 100) % 2 == 0L) 500.0 else 400.0
+            "Alarm Clock" -> if ((time / 300) % 2 == 0L) 2000.0 else 0.0
+            else -> 1500.0
+        }
     }
 
     private fun makeEmergencyCall() {

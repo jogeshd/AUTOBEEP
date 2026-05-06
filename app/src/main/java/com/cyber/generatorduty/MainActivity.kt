@@ -108,7 +108,7 @@ class MainActivity : ComponentActivity() {
                             isDark = isDarkMode.value,
                             onThemeToggle = { isDarkMode.value = !isDarkMode.value },
                             ringtone = selectedRingtone.value,
-                            onRingtoneChange = { selectedRingtone.value = it },
+                            onRingtoneChange = { selectedRingtone.value = it; previewTone(it) },
                             selectedTheme = selectedTheme.value,
                             onThemeChange = { selectedTheme.value = it }
                         )
@@ -177,6 +177,66 @@ class MainActivity : ComponentActivity() {
             }
         } else {
             stopService(intent)
+        }
+    }
+
+    private var previewTrack: android.media.AudioTrack? = null
+    private var isPreviewing = false
+
+    private fun previewTone(toneName: String) {
+        isPreviewing = false // Stop current
+        previewTrack?.stop()
+        previewTrack?.release()
+        
+        isPreviewing = true
+        Thread {
+            val sampleRate = 44100
+            val numSamples = sampleRate * 2 // 2 seconds
+            val samples = ShortArray(numSamples)
+            val minSize = android.media.AudioTrack.getMinBufferSize(sampleRate, android.media.AudioFormat.CHANNEL_OUT_MONO, android.media.AudioFormat.ENCODING_PCM_16BIT)
+            
+            previewTrack = android.media.AudioTrack(
+                android.media.AudioManager.STREAM_ALARM,
+                sampleRate,
+                android.media.AudioFormat.CHANNEL_OUT_MONO,
+                android.media.AudioFormat.ENCODING_PCM_16BIT,
+                minSize.coerceAtLeast(numSamples * 2),
+                android.media.AudioTrack.MODE_STREAM
+            )
+            
+            previewTrack?.play()
+            
+            var angle = 0.0
+            val startTime = System.currentTimeMillis()
+            while (isPreviewing && System.currentTimeMillis() - startTime < 2000) {
+                val freq = getFreqForTone(toneName, System.currentTimeMillis())
+                for (i in samples.indices.step(100)) { // Fill in chunks
+                    for (j in 0 until 100) {
+                        if (i + j < samples.size) {
+                            samples[i + j] = (Math.sin(angle) * 32767).toInt().toShort()
+                            angle += 2.0 * Math.PI * freq / sampleRate
+                        }
+                    }
+                }
+                previewTrack?.write(samples, 0, samples.size)
+            }
+            isPreviewing = false
+        }.start()
+    }
+
+    private fun getFreqForTone(name: String, time: Long): Double {
+        return when (name) {
+            "Siren" -> if ((time / 500) % 2 == 0L) 1200.0 else 800.0
+            "Nuclear" -> if ((time / 200) % 5 == 0L) 1000.0 else 0.0
+            "Air Horn" -> 440.0
+            "High Pitch" -> 4000.0
+            "Metal Scraping" -> (Math.random() * 2000 + 1000)
+            "Jackhammer" -> if ((time / 50) % 2 == 0L) 200.0 else 0.0
+            "Whistle" -> 2500.0
+            "Buzzer" -> if ((time / 100) % 2 == 0L) 500.0 else 400.0
+            "Alarm Clock" -> if ((time / 300) % 2 == 0L) 2000.0 else 0.0
+            "Nuclear" -> if ((time / 1000) % 2 == 0L) 1500.0 else 500.0
+            else -> 1000.0
         }
     }
 
@@ -249,13 +309,17 @@ fun SettingsScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .pointerInput(Unit) { detectTapGestures(onTap = { onRingtoneChange(tone) }) }
+                        .pointerInput(Unit) { 
+                            detectTapGestures(onTap = { onRingtoneChange(tone) }) 
+                        }
                         .padding(vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     RadioButton(
                         selected = ringtone == tone,
-                        onClick = { onRingtoneChange(tone) },
+                        onClick = { 
+                            onRingtoneChange(tone)
+                        },
                         colors = RadioButtonDefaults.colors(selectedColor = NeonBlue)
                     )
                     Text(tone, color = if (ringtone == tone) NeonBlue else Color.White)
